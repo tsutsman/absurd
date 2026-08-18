@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "skill_name": "absurd",
+  "modes": {
+    "dry": {
+      "purpose": "Сухий deadpan із мінімумом ремарок і короткою причинною ескалацією.",
+      "dialogue_share_target": [0.7, 0.9],
+      "escalation_steps_target": [1, 2],
+      "requires_central_rule": true,
+      "requires_causality": true,
+      "requires_final_turn": true,
+      "forbid_random_nonsense": true,
+      "notes": [
+        "Короткі репліки переважають над описом.",
+        "Ремарок мало або немає.",
+        "Одна центральна дивина."
+      ]
+    },
+    "scene": {
+      "purpose": "Типова коротка сценка з місцем, конфліктом, причинною ескалацією і фінальним зламом.",
+      "dialogue_share_target": [0.5, 0.85],
+      "escalation_steps_target": [2, 4],
+      "requires_central_rule": true,
+      "requires_causality": true,
+      "requires_final_turn": true,
+      "forbid_random_nonsense": true,
+      "notes": [
+        "Є конкретне місце або виразний предмет конфлікту.",
+        "Щонайменше два голоси або один сильний монолог.",
+        "Ремарки короткі й сценічні."
+      ]
+    },
+    "chaos": {
+      "purpose": "Інтенсивніший гротеск і швидша ескалація без втрати причинності.",
+      "dialogue_share_target": [0.45, 0.8],
+      "escalation_steps_target": [3, 6],
+      "requires_central_rule": true,
+      "requires_causality": true,
+      "requires_final_turn": true,
+      "forbid_random_nonsense": true,
+      "notes": [
+        "Інтенсивність вища, ніж у scene.",
+        "Кількість непов’язаних сутностей не збільшується заради хаосу.",
+        "Усі великі події залишаються на одній причинній осі."
+      ]
+    },
+    "normal": {
+      "purpose": "Повністю вимкнений стиль АБСУРД.",
+      "dialogue_share_target": null,
+      "escalation_steps_target": [0, 0],
+      "requires_central_rule": false,
+      "requires_causality": false,
+      "requires_final_turn": false,
+      "forbid_random_nonsense": true,
+      "forbidden_style_artifacts": [
+        "непрохані сценічні ремарки",
+        "непрохані вигадані персонажі",
+        "псевдобюрократичний гротеск",
+        "абсурдна ескалація замість прямої відповіді"
+      ],
+      "notes": [
+        "Фактичні й технічні відповіді подаються прямо.",
+        "Стиль не залишає інерційних артефактів після вимкнення."
+      ]
+    }
+  }
+}
