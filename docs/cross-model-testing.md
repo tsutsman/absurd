@@ -1,16 +1,25 @@
-# Cross-model testing АБСУРДУ
+# Cross-runtime testing АБСУРДУ
 
 ## Мета
 
-Перевірити, що однакові режими АБСУРДУ поводяться достатньо однаково в Codex і Claude Code та не деградують у random nonsense, надмірні ремарки або невимкнений стиль.
+Перевірити, що однакові режими АБСУРДУ поводяться достатньо однаково в Codex, Claude Code, Hermes Agent і OpenClaw та не деградують у random nonsense, надмірні ремарки або невимкнений стиль.
 
 Джерело контрактів: `evals/mode-contracts.json`.
 Матриця запусків: `evals/cross-model-matrix.json`.
 Набір сценаріїв: `evals/absurd.json`.
 
+Назва файлу `cross-model-matrix.json` збережена для сумісності, але фактично матриця тепер порівнює чотири agent runtimes. Hermes Agent і OpenClaw можуть працювати з різними underlying models, тому під час реального прогону треба фіксувати runtime version, model/provider і commit/tag АБСУРДУ.
+
 ## Правило чесності
 
 Статус `pass` можна ставити лише після реального запуску конкретного eval у конкретному runtime. Не допускається заповнювати матрицю на підставі припущення, документації або відповіді іншої моделі.
+
+## Runtime targets
+
+- `codex` — інтеграція через `codex/AGENTS-absurd.md`;
+- `claude-code` — `output-styles/absurd.md` + `commands/absurd.md`;
+- `hermes-agent` — `skills/absurd/SKILL.md` через `install-absurd-hermes.sh`;
+- `openclaw` — `skills/absurd/SKILL.md` через `install-absurd-openclaw.sh`.
 
 ## Набір обов’язкових кейсів
 
@@ -28,11 +37,12 @@
 Для кожного середовища:
 
 1. Встановити АБСУРД з одного й того самого commit SHA або release tag.
-2. Запустити кожен обов’язковий eval без додаткових підказок, які змінюють поведінку стилю.
-3. Зберегти сирий output або посилання на артефакт запуску.
-4. Оцінити відповідь за `expectations` відповідного eval і контрактом режиму.
-5. Внести у `evals/cross-model-matrix.json` `pass` або `fail` та коротку примітку.
-6. Якщо є `fail`, виправляти інтеграцію або контракт, а не підганяти конкретний prompt під модель.
+2. Зафіксувати runtime version і underlying model/provider, якщо runtime дозволяє їх змінювати.
+3. Запустити кожен обов’язковий eval без додаткових підказок, які змінюють поведінку стилю.
+4. Зберегти сирий output або посилання на артефакт запуску.
+5. Оцінити відповідь за `expectations` відповідного eval і контрактом режиму.
+6. Внести у `evals/cross-model-matrix.json` `pass` або `fail` та коротку примітку.
+7. Якщо є `fail`, виправляти інтеграцію або контракт, а не підганяти конкретний prompt під модель.
 
 ## Критерії режимів
 
@@ -70,13 +80,16 @@
 |---|---:|---:|---:|---:|---:|---:|
 | Codex | pending | pending | pending | pending | pending | pending |
 | Claude Code | pending | pending | pending | pending | pending | pending |
+| Hermes Agent | pending | pending | pending | pending | pending | pending |
+| OpenClaw | pending | pending | pending | pending | pending | pending |
 
 `pending` означає: runtime ще не був реально запущений у цьому циклі перевірки.
 
 ## DoD для issue #4
 
-- усі 12 комірок матриці мають фактичний `pass`/`fail`;
+- усі 24 комірки матриці мають фактичний `pass`/`fail`;
 - усі `fail` або виправлені, або явно прийняті з обґрунтуванням;
 - `normal` не залишає стилістичних артефактів;
 - `dry`, `scene`, `chaos` відрізняються структурою, а не лише назвою;
+- для Hermes/OpenClaw зафіксовано underlying model/provider;
 - `npm test` і installer smoke залишаються зеленими.
