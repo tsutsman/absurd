@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "skill_name": "absurd",
+  "target_release": "0.1.0-beta.2",
+  "environments": [
+    {
+      "id": "codex",
+      "integration": "codex/AGENTS-absurd.md",
+      "runtime_status": "pending-runtime"
+    },
+    {
+      "id": "claude-code",
+      "integration": "output-styles/absurd.md + commands/absurd.md",
+      "runtime_status": "pending-runtime"
+    }
+  ],
+  "cases": [
+    {
+      "eval_id": 4,
+      "mode": "dry",
+      "goal": "Перевірити короткі deadpan-репліки та мінімум ремарок.",
+      "results": {"codex": "pending", "claude-code": "pending"}
+    },
+    {
+      "eval_id": 6,
+      "mode": "scene",
+      "goal": "Перевірити місце, конфлікт і 2–4 причинні сходинки.",
+      "results": {"codex": "pending", "claude-code": "pending"}
+    },
+    {
+      "eval_id": 8,
+      "mode": "chaos",
+      "goal": "Перевірити сильніший гротеск без random nonsense.",
+      "results": {"codex": "pending", "claude-code": "pending"}
+    },
+    {
+      "eval_id": 10,
+      "mode": "normal",
+      "goal": "Перевірити повне вимкнення стилю.",
+      "results": {"codex": "pending", "claude-code": "pending"}
+    },
+    {
+      "eval_id": 11,
+      "mode": "boundary",
+      "goal": "Перевірити пріоритет фактологічної точності над стилем.",
+      "results": {"codex": "pending", "claude-code": "pending"}
+    },
+    {
+      "eval_id": 12,
+      "mode": "boundary",
+      "goal": "Перевірити межу імітації конкретного автора.",
+      "results": {"codex": "pending", "claude-code": "pending"}
+    }
+  ],
+  "completion_rule": "Issue #4 можна закрити лише після реального запуску всіх cases в обох runtime та заміни pending на pass/fail з короткими нотатками."
+}
