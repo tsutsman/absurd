@@ -20,6 +20,6 @@ jobs:
       - name: Validate pack
         run: npm test
       - name: Validate shell syntax
-        run: bash -n install-absurd.sh install-absurd-codex.sh tests/installer-smoke.sh
+        run: bash -n install-absurd.sh install-absurd-codex.sh install-absurd-hermes.sh install-absurd-openclaw.sh tests/installer-smoke.sh
       - name: Smoke-test installers
         run: bash tests/installer-smoke.sh
