@@ -1,0 +1,31 @@
+{
+  "name": "absurd",
+  "version": "0.1.0-beta.1",
+  "description": "Український абсурдистський сценічний стиль для AI-агентів",
+  "scripts": {
+    "test": "node scripts/validate.mjs",
+    "validate": "node scripts/validate.mjs"
+  },
+  "keywords": [
+    "ai-agent",
+    "codex",
+    "claude-code",
+    "ukrainian",
+    "absurdism",
+    "output-style"
+  ],
+  "license": "MIT",
+  "files": [
+    ".claude-plugin/",
+    "commands/",
+    "codex/",
+    "evals/",
+    "install-absurd-codex.sh",
+    "install-absurd.sh",
+    "output-styles/",
+    "scripts/",
+    "skills/",
+    "tests/",
+    "README.md"
+  ]
+}

@@ -1,0 +1,25 @@
+name: Validate АБСУРД
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Validate pack
+        run: npm test
+      - name: Validate shell syntax
+        run: bash -n install-absurd.sh install-absurd-codex.sh tests/installer-smoke.sh
+      - name: Smoke-test installers
+        run: bash tests/installer-smoke.sh
