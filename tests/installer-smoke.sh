@@ -32,6 +32,7 @@ fi
 TARGET_CLAUDE_DIR="$CLAUDE_DIR" bash "$ROOT_DIR/install-absurd.sh"
 test -s "$CLAUDE_DIR/output-styles/absurd.md"
 test -s "$CLAUDE_DIR/skills/absurd/SKILL.md"
+grep -Fq "user-invocable: true" "$CLAUDE_DIR/skills/absurd/SKILL.md"
 TARGET_CLAUDE_DIR="$CLAUDE_DIR" bash "$ROOT_DIR/install-absurd.sh" --uninstall
 test ! -e "$CLAUDE_DIR/output-styles/absurd.md"
 test ! -e "$CLAUDE_DIR/skills/absurd/SKILL.md"
@@ -39,12 +40,14 @@ test ! -e "$CLAUDE_DIR/skills/absurd/SKILL.md"
 TARGET_HERMES_SKILLS_DIR="$HERMES_SKILLS_DIR" bash "$ROOT_DIR/install-absurd-hermes.sh"
 test -s "$HERMES_SKILLS_DIR/absurd/SKILL.md"
 grep -Fq "name: absurd" "$HERMES_SKILLS_DIR/absurd/SKILL.md"
+grep -Fq "user-invocable: true" "$HERMES_SKILLS_DIR/absurd/SKILL.md"
 TARGET_HERMES_SKILLS_DIR="$HERMES_SKILLS_DIR" bash "$ROOT_DIR/install-absurd-hermes.sh" --uninstall
 test ! -e "$HERMES_SKILLS_DIR/absurd"
 
 TARGET_OPENCLAW_SKILLS_DIR="$OPENCLAW_SKILLS_DIR" bash "$ROOT_DIR/install-absurd-openclaw.sh"
 test -s "$OPENCLAW_SKILLS_DIR/absurd/SKILL.md"
 grep -Fq "name: absurd" "$OPENCLAW_SKILLS_DIR/absurd/SKILL.md"
+grep -Fq "user-invocable: true" "$OPENCLAW_SKILLS_DIR/absurd/SKILL.md"
 TARGET_OPENCLAW_SKILLS_DIR="$OPENCLAW_SKILLS_DIR" bash "$ROOT_DIR/install-absurd-openclaw.sh" --uninstall
 test ! -e "$OPENCLAW_SKILLS_DIR/absurd"
 
