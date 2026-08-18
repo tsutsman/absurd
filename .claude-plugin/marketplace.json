@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "absurd",
+  "description": "Окремий український абсурдистський сценічний стиль для AI-агентів.",
+  "owner": {
+    "name": "Сергій Цуцман",
+    "url": "https://github.com/tsutsman"
+  },
+  "plugins": [
+    {
+      "name": "absurd",
+      "description": "Вигадані сцени, сухий гротеск і соціальна сатира українською.",
+      "source": "./",
+      "category": "fun"
+    }
+  ]
+}
