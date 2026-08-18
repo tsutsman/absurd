@@ -13,8 +13,11 @@ const requiredFiles = [
   "docs/ukrainian-absurd.md",
   "docs/anti-patterns.md",
   "docs/cross-model-testing.md",
+  "docs/runtime-integrations.md",
   "install-absurd.sh",
-  "install-absurd-codex.sh"
+  "install-absurd-codex.sh",
+  "install-absurd-hermes.sh",
+  "install-absurd-openclaw.sh"
 ];
 
 for (const file of requiredFiles) {
@@ -95,9 +98,15 @@ const matrix = JSON.parse(fs.readFileSync("evals/cross-model-matrix.json", "utf8
 if (matrix.skill_name !== "absurd" || matrix.schema_version !== 1) {
   throw new Error("Неправильний cross-model matrix manifest.");
 }
-const environmentIds = new Set((matrix.environments || []).map((environment) => environment.id));
-for (const environment of ["codex", "claude-code"]) {
-  if (!environmentIds.has(environment)) {
+const requiredEnvironments = ["codex", "claude-code", "hermes-agent", "openclaw"];
+const matrixEnvironments = Array.isArray(matrix.environments) ? matrix.environments : [];
+const environmentIds = matrixEnvironments.map((environment) => environment.id);
+const uniqueEnvironmentIds = new Set(environmentIds);
+if (uniqueEnvironmentIds.size !== environmentIds.length) {
+  throw new Error("Cross-model matrix містить дублікати runtime environments.");
+}
+for (const environment of requiredEnvironments) {
+  if (!uniqueEnvironmentIds.has(environment)) {
     throw new Error("Cross-model matrix не містить середовище: " + environment);
   }
 }
@@ -106,14 +115,15 @@ if (!Array.isArray(matrix.cases) || matrix.cases.length < 6) {
 }
 const requiredMatrixModes = new Set(["dry", "scene", "chaos", "normal", "boundary"]);
 const matrixModes = new Set();
+const allowedResults = new Set(["pending", "pass", "fail"]);
 for (const testCase of matrix.cases) {
   if (!ids.has(testCase.eval_id)) {
     throw new Error("Cross-model matrix посилається на невідомий eval_id: " + testCase.eval_id);
   }
   matrixModes.add(testCase.mode);
-  for (const environment of ["codex", "claude-code"]) {
+  for (const environment of environmentIds) {
     const result = testCase.results?.[environment];
-    if (!new Set(["pending", "pass", "fail"]).has(result)) {
+    if (!allowedResults.has(result)) {
       throw new Error("Невідомий результат " + environment + " для eval " + testCase.eval_id + ": " + result);
     }
   }
@@ -123,12 +133,21 @@ for (const mode of requiredMatrixModes) {
     throw new Error("Cross-model matrix не покриває режим: " + mode);
   }
 }
+if (matrix.cases.length * requiredEnvironments.length < 24) {
+  throw new Error("Cross-model matrix має покривати щонайменше 24 runtime-комірки.");
+}
 
-for (const file of ["install-absurd.sh", "install-absurd-codex.sh"]) {
+const installers = [
+  "install-absurd.sh",
+  "install-absurd-codex.sh",
+  "install-absurd-hermes.sh",
+  "install-absurd-openclaw.sh"
+];
+for (const file of installers) {
   const text = fs.readFileSync(file, "utf8");
   if (!text.includes("ABSURD_REF") || !text.includes("tsutsman/absurd")) {
     throw new Error("Інсталятор не прив’язаний до standalone-репозиторію: " + file);
   }
 }
 
-console.log("OK: АБСУРД валідний; mode contracts і cross-model matrix структурно коректні.");
+console.log("OK: АБСУРД валідний; 4 runtime integrations і cross-model matrix >= 24 cells структурно коректні.");
