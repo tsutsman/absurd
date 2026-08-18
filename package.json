@@ -4,7 +4,9 @@
   "description": "Український абсурдистський сценічний стиль для AI-агентів",
   "scripts": {
     "test": "node scripts/validate.mjs",
-    "validate": "node scripts/validate.mjs"
+    "validate": "node scripts/validate.mjs",
+    "cross-model:status": "node scripts/check-cross-model.mjs",
+    "cross-model:gate": "node scripts/check-cross-model.mjs --require-pass"
   },
   "keywords": [
     "ai-agent",
