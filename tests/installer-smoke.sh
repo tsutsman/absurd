@@ -9,6 +9,8 @@ trap 'rm -rf -- "$WORK_DIR"' EXIT
 
 CODEX_DIR="$WORK_DIR/codex"
 CLAUDE_DIR="$WORK_DIR/claude"
+HERMES_SKILLS_DIR="$WORK_DIR/hermes/skills"
+OPENCLAW_SKILLS_DIR="$WORK_DIR/openclaw/skills"
 
 mkdir -p "$CODEX_DIR"
 printf '# Існуючі правила\n' > "$CODEX_DIR/AGENTS.md"
@@ -34,4 +36,16 @@ TARGET_CLAUDE_DIR="$CLAUDE_DIR" bash "$ROOT_DIR/install-absurd.sh" --uninstall
 test ! -e "$CLAUDE_DIR/output-styles/absurd.md"
 test ! -e "$CLAUDE_DIR/skills/absurd/SKILL.md"
 
-echo "OK: standalone Codex/Claude Code інсталятори АБСУРД пройшли smoke-перевірку."
+TARGET_HERMES_SKILLS_DIR="$HERMES_SKILLS_DIR" bash "$ROOT_DIR/install-absurd-hermes.sh"
+test -s "$HERMES_SKILLS_DIR/absurd/SKILL.md"
+grep -Fq "name: absurd" "$HERMES_SKILLS_DIR/absurd/SKILL.md"
+TARGET_HERMES_SKILLS_DIR="$HERMES_SKILLS_DIR" bash "$ROOT_DIR/install-absurd-hermes.sh" --uninstall
+test ! -e "$HERMES_SKILLS_DIR/absurd"
+
+TARGET_OPENCLAW_SKILLS_DIR="$OPENCLAW_SKILLS_DIR" bash "$ROOT_DIR/install-absurd-openclaw.sh"
+test -s "$OPENCLAW_SKILLS_DIR/absurd/SKILL.md"
+grep -Fq "name: absurd" "$OPENCLAW_SKILLS_DIR/absurd/SKILL.md"
+TARGET_OPENCLAW_SKILLS_DIR="$OPENCLAW_SKILLS_DIR" bash "$ROOT_DIR/install-absurd-openclaw.sh" --uninstall
+test ! -e "$OPENCLAW_SKILLS_DIR/absurd"
+
+echo "OK: Codex, Claude Code, Hermes Agent і OpenClaw інсталятори АБСУРД пройшли smoke-перевірку."
