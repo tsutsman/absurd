@@ -1,0 +1,86 @@
+name: Runtime cross-model АБСУРД
+
+on:
+  push:
+    branches:
+      - agent/runtime-cross-model-run
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codex-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run Codex matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p runtime-results/codex
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            printf '%s\n' '{"runtime":"codex","status":"missing-secret","required_secret":"OPENAI_API_KEY"}' > runtime-results/codex/summary.json
+            echo "OPENAI_API_KEY is not configured; Codex runtime was not executed."
+            exit 0
+          fi
+          npm install -g @openai/codex
+          codex --version | tee runtime-results/codex/cli-version.txt
+          TARGET_CODEX_DIR="$HOME/.codex" bash install-absurd-codex.sh
+          node scripts/run-runtime-matrix.mjs codex
+
+      - name: Upload Codex results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: absurd-codex-runtime-results
+          path: runtime-results/codex
+          if-no-files-found: error
+
+  claude-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      DISABLE_AUTOUPDATER: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run Claude Code matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p runtime-results/claude-code
+          if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            printf '%s\n' '{"runtime":"claude-code","status":"missing-secret","required_secret":"ANTHROPIC_API_KEY"}' > runtime-results/claude-code/summary.json
+            echo "ANTHROPIC_API_KEY is not configured; Claude Code runtime was not executed."
+            exit 0
+          fi
+          npm install -g @anthropic-ai/claude-code
+          claude --version | tee runtime-results/claude-code/cli-version.txt
+          TARGET_CLAUDE_DIR="$HOME/.claude" bash install-absurd.sh
+          node scripts/run-runtime-matrix.mjs claude-code
+
+      - name: Upload Claude Code results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: absurd-claude-runtime-results
+          path: runtime-results/claude-code
+          if-no-files-found: error
