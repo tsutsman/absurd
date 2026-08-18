@@ -26,6 +26,14 @@ for (const file of requiredFiles) {
   }
 }
 
+const skillText = fs.readFileSync("skills/absurd/SKILL.md", "utf8");
+if (!/^name:\s*absurd\s*$/m.test(skillText)) {
+  throw new Error("SKILL.md повинен мати frontmatter name: absurd.");
+}
+if (!/^user-invocable:\s*true\s*$/m.test(skillText)) {
+  throw new Error("SKILL.md повинен бути user-invocable для slash-команд у skill runtimes.");
+}
+
 const manifest = JSON.parse(fs.readFileSync("evals/absurd.json", "utf8"));
 if (manifest.skill_name !== "absurd") {
   throw new Error("Неправильне ім’я skill у eval-manifest.");
