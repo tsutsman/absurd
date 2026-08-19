@@ -1,4 +1,4 @@
-# Cross-runtime testing АБСУРДУ
+# Cross-model testing АБСУРДУ
 
 ## Мета
 
@@ -8,18 +8,9 @@
 Матриця запусків: `evals/cross-model-matrix.json`.
 Набір сценаріїв: `evals/absurd.json`.
 
-Назва файлу `cross-model-matrix.json` збережена для сумісності, але фактично матриця тепер порівнює чотири agent runtimes. Hermes Agent і OpenClaw можуть працювати з різними underlying models, тому під час реального прогону треба фіксувати runtime version, model/provider і commit/tag АБСУРДУ.
-
 ## Правило чесності
 
 Статус `pass` можна ставити лише після реального запуску конкретного eval у конкретному runtime. Не допускається заповнювати матрицю на підставі припущення, документації або відповіді іншої моделі.
-
-## Runtime targets
-
-- `codex` — інтеграція через `codex/AGENTS-absurd.md`;
-- `claude-code` — `output-styles/absurd.md` + `commands/absurd.md`;
-- `hermes-agent` — `skills/absurd/SKILL.md` через `install-absurd-hermes.sh`;
-- `openclaw` — `skills/absurd/SKILL.md` через `install-absurd-openclaw.sh`.
 
 ## Набір обов’язкових кейсів
 
@@ -37,12 +28,23 @@
 Для кожного середовища:
 
 1. Встановити АБСУРД з одного й того самого commit SHA або release tag.
-2. Зафіксувати runtime version і underlying model/provider, якщо runtime дозволяє їх змінювати.
-3. Запустити кожен обов’язковий eval без додаткових підказок, які змінюють поведінку стилю.
-4. Зберегти сирий output або посилання на артефакт запуску.
+2. Запустити кожен обов’язковий eval без додаткових творчих підказок, які змінюють поведінку стилю.
+3. Зберегти сирий output або посилання на artifact запуску.
+4. Зафіксувати runtime version і, де runtime сам обирає provider/model, фактичний або запитаний provider/model.
 5. Оцінити відповідь за `expectations` відповідного eval і контрактом режиму.
 6. Внести у `evals/cross-model-matrix.json` `pass` або `fail` та коротку примітку.
 7. Якщо є `fail`, виправляти інтеграцію або контракт, а не підганяти конкретний prompt під модель.
+
+## Transport adapters
+
+Eval-manifest зберігає користувацьку форму `/absurd <mode> ...`, але не кожен headless transport дозволяє передавати slash-команди як повідомлення.
+
+- **Codex** — отримує eval prompt напряму; правила доставляються через `AGENTS.md`.
+- **Claude Code** — отримує eval prompt напряму; стиль доставляється через output style або точний fallback system prompt.
+- **Hermes Agent** — skill `absurd` preload-иться через `--skills absurd`; якщо prompt починається з `/absurd <mode>`, runtime harness замінює лише transport prefix на `Use the installed "absurd" skill in <mode> mode.` і залишає решту eval без змін.
+- **OpenClaw** — skill встановлюється у shared skill root; `agent exec` не використовується для інтерактивних slash-команд, тому застосовується той самий transport adapter, що й для Hermes.
+
+Це не нова творча підказка і не зміна expectation: adapter лише переводить інтерактивну slash-форму у headless skill-preload форму. У `summary.json` і для кожного case фіксується, чи prompt був адаптований.
 
 ## Критерії режимів
 
@@ -83,13 +85,13 @@
 | Hermes Agent | pending | pending | pending | pending | pending | pending |
 | OpenClaw | pending | pending | pending | pending | pending | pending |
 
-`pending` означає: runtime ще не був реально запущений у цьому циклі перевірки.
+`pending` означає: runtime ще не був реально запущений у цьому циклі перевірки або модельний виклик був заблокований відсутніми credentials.
 
 ## DoD для issue #4
 
 - усі 24 комірки матриці мають фактичний `pass`/`fail`;
 - усі `fail` або виправлені, або явно прийняті з обґрунтуванням;
+- для Hermes Agent/OpenClaw зафіксовані runtime version і underlying provider/model;
 - `normal` не залишає стилістичних артефактів;
 - `dry`, `scene`, `chaos` відрізняються структурою, а не лише назвою;
-- для Hermes/OpenClaw зафіксовано underlying model/provider;
 - `npm test` і installer smoke залишаються зеленими.
