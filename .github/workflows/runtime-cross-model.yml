@@ -12,6 +12,9 @@ on:
 permissions:
   contents: read
 
+env:
+  ABSURD_RUNTIME_OPENAI_MODEL: ${{ vars.ABSURD_RUNTIME_OPENAI_MODEL || 'gpt-5.6' }}
+
 jobs:
   codex-runtime:
     runs-on: ubuntu-latest
@@ -21,27 +24,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
+      - name: Install Codex and АБСУРД
+        run: |
+          npm install -g @openai/codex
+          codex --version | tee /tmp/codex-version.txt
+          TARGET_CODEX_DIR="$HOME/.codex" bash install-absurd-codex.sh
       - name: Run Codex matrix
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p runtime-results/codex
+          cp /tmp/codex-version.txt runtime-results/codex/cli-version.txt
           if [ -z "${OPENAI_API_KEY:-}" ]; then
-            printf '%s\n' '{"runtime":"codex","status":"missing-secret","required_secret":"OPENAI_API_KEY"}' > runtime-results/codex/summary.json
-            echo "OPENAI_API_KEY is not configured; Codex runtime was not executed."
+            node -e 'const fs=require("fs"); fs.writeFileSync("runtime-results/codex/summary.json", JSON.stringify({runtime:"codex",status:"missing-secret",required_secret:"OPENAI_API_KEY",cli_version:fs.readFileSync("/tmp/codex-version.txt","utf8").trim()},null,2)+"\n")'
+            echo "OPENAI_API_KEY is not configured; Codex model calls were not executed."
             exit 0
           fi
-          npm install -g @openai/codex
-          codex --version | tee runtime-results/codex/cli-version.txt
-          TARGET_CODEX_DIR="$HOME/.codex" bash install-absurd-codex.sh
           node scripts/run-runtime-matrix.mjs codex
-
       - name: Upload Codex results
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,31 +62,121 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
+      - name: Install Claude Code and АБСУРД
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          claude --version | tee /tmp/claude-version.txt
+          TARGET_CLAUDE_DIR="$HOME/.claude" bash install-absurd.sh
       - name: Run Claude Code matrix
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p runtime-results/claude-code
+          cp /tmp/claude-version.txt runtime-results/claude-code/cli-version.txt
           if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-            printf '%s\n' '{"runtime":"claude-code","status":"missing-secret","required_secret":"ANTHROPIC_API_KEY"}' > runtime-results/claude-code/summary.json
-            echo "ANTHROPIC_API_KEY is not configured; Claude Code runtime was not executed."
+            node -e 'const fs=require("fs"); fs.writeFileSync("runtime-results/claude-code/summary.json", JSON.stringify({runtime:"claude-code",status:"missing-secret",required_secret:"ANTHROPIC_API_KEY",cli_version:fs.readFileSync("/tmp/claude-version.txt","utf8").trim()},null,2)+"\n")'
+            echo "ANTHROPIC_API_KEY is not configured; Claude Code model calls were not executed."
             exit 0
           fi
-          npm install -g @anthropic-ai/claude-code
-          claude --version | tee runtime-results/claude-code/cli-version.txt
-          TARGET_CLAUDE_DIR="$HOME/.claude" bash install-absurd.sh
           node scripts/run-runtime-matrix.mjs claude-code
-
       - name: Upload Claude Code results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: absurd-claude-runtime-results
           path: runtime-results/claude-code
+          if-no-files-found: error
+
+  hermes-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      HERMES_RUNTIME_PROVIDER: openai-api
+      HERMES_RUNTIME_MODEL: ${{ vars.HERMES_RUNTIME_MODEL || vars.ABSURD_RUNTIME_OPENAI_MODEL || 'gpt-5.6' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Hermes Agent and АБСУРД
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-setup --skip-browser
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          hermes --version | tee /tmp/hermes-version.txt
+          bash install-absurd-hermes.sh
+          hermes skills list | tee /tmp/hermes-skills.txt
+          grep -q "absurd" /tmp/hermes-skills.txt
+      - name: Run Hermes Agent matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p runtime-results/hermes-agent
+          cp /tmp/hermes-version.txt runtime-results/hermes-agent/cli-version.txt
+          cp /tmp/hermes-skills.txt runtime-results/hermes-agent/skills-list.txt
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            node -e 'const fs=require("fs"); fs.writeFileSync("runtime-results/hermes-agent/summary.json", JSON.stringify({runtime:"hermes-agent",status:"missing-secret",required_secret:"OPENAI_API_KEY",provider:process.env.HERMES_RUNTIME_PROVIDER,model:process.env.HERMES_RUNTIME_MODEL,cli_version:fs.readFileSync("/tmp/hermes-version.txt","utf8").trim(),skill_preflight:"pass"},null,2)+"\n")'
+            echo "OPENAI_API_KEY is not configured; Hermes Agent model calls were not executed."
+            exit 0
+          fi
+          node scripts/run-runtime-matrix.mjs hermes-agent
+      - name: Upload Hermes Agent results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: absurd-hermes-runtime-results
+          path: runtime-results/hermes-agent
+          if-no-files-found: error
+
+  openclaw-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENCLAW_RUNTIME_MODEL: ${{ vars.OPENCLAW_RUNTIME_MODEL || format('openai/{0}', vars.ABSURD_RUNTIME_OPENAI_MODEL || 'gpt-5.6') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Install OpenClaw and АБСУРД
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install -g openclaw@latest
+          openclaw --version | tee /tmp/openclaw-version.txt
+          export OPENCLAW_STATE_DIR="$HOME/.openclaw"
+          bash install-absurd-openclaw.sh
+          openclaw skills info absurd --json | tee /tmp/openclaw-skill.json
+      - name: Run OpenClaw matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          export OPENCLAW_STATE_DIR="$HOME/.openclaw"
+          mkdir -p runtime-results/openclaw
+          cp /tmp/openclaw-version.txt runtime-results/openclaw/cli-version.txt
+          cp /tmp/openclaw-skill.json runtime-results/openclaw/skill-info.json
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            node -e 'const fs=require("fs"); fs.writeFileSync("runtime-results/openclaw/summary.json", JSON.stringify({runtime:"openclaw",status:"missing-secret",required_secret:"OPENAI_API_KEY",model:process.env.OPENCLAW_RUNTIME_MODEL,cli_version:fs.readFileSync("/tmp/openclaw-version.txt","utf8").trim(),skill_preflight:"pass"},null,2)+"\n")'
+            echo "OPENAI_API_KEY is not configured; OpenClaw model calls were not executed."
+            exit 0
+          fi
+          node scripts/run-runtime-matrix.mjs openclaw
+      - name: Upload OpenClaw results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: absurd-openclaw-runtime-results
+          path: runtime-results/openclaw
           if-no-files-found: error
