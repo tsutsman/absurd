@@ -3,8 +3,9 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const runtime = process.argv[2];
-if (!new Set(["codex", "claude-code"]).has(runtime)) {
-  console.error("Usage: node scripts/run-runtime-matrix.mjs <codex|claude-code>");
+const supportedRuntimes = new Set(["codex", "claude-code", "hermes-agent", "openclaw"]);
+if (!supportedRuntimes.has(runtime)) {
+  console.error("Usage: node scripts/run-runtime-matrix.mjs <codex|claude-code|hermes-agent|openclaw>");
   process.exit(2);
 }
 
@@ -14,10 +15,36 @@ const evalById = new Map(evalManifest.evals.map((item) => [item.id, item]));
 const outputDir = path.join("runtime-results", runtime);
 fs.mkdirSync(outputDir, { recursive: true });
 
-const cli = runtime === "codex" ? "codex" : "claude";
+const runtimeConfig = {
+  codex: {
+    cli: "codex",
+    helpArgs: ["exec", "--help"],
+    integrationDelivery: "installed AGENTS.md via install-absurd-codex.sh"
+  },
+  "claude-code": {
+    cli: "claude",
+    helpArgs: ["--help"],
+    integrationDelivery: null
+  },
+  "hermes-agent": {
+    cli: "hermes",
+    helpArgs: ["chat", "--help"],
+    integrationDelivery: "installed skill + --skills absurd preload"
+  },
+  openclaw: {
+    cli: "openclaw",
+    helpArgs: ["agent", "exec", "--help"],
+    integrationDelivery: "installed shared skill + isolated agent exec"
+  }
+}[runtime];
+
+const cli = runtimeConfig.cli;
 const version = spawnSync(cli, ["--version"], { encoding: "utf8", timeout: 30_000 });
-const helpArgs = runtime === "codex" ? ["exec", "--help"] : ["--help"];
-const help = spawnSync(cli, helpArgs, { encoding: "utf8", timeout: 30_000 });
+const help = spawnSync(cli, runtimeConfig.helpArgs, { encoding: "utf8", timeout: 30_000 });
+const openAiModel = process.env.ABSURD_RUNTIME_OPENAI_MODEL || "gpt-5.6";
+const hermesProvider = process.env.HERMES_RUNTIME_PROVIDER || "openai-api";
+const hermesModel = process.env.HERMES_RUNTIME_MODEL || openAiModel;
+const openclawModel = process.env.OPENCLAW_RUNTIME_MODEL || `openai/${openAiModel}`;
 
 const metadata = {
   runtime,
@@ -26,7 +53,12 @@ const metadata = {
   cli_version: (version.stdout || version.stderr || "").trim(),
   cli_version_exit_code: version.status,
   started_at: new Date().toISOString(),
-  integration_delivery: null,
+  integration_delivery: runtimeConfig.integrationDelivery,
+  prompt_transport: ["hermes-agent", "openclaw"].includes(runtime)
+    ? "skill-preload-adapter"
+    : "direct-eval-prompt",
+  requested_provider: runtime === "hermes-agent" ? hermesProvider : runtime === "openclaw" ? openclawModel.split("/")[0] : null,
+  requested_model: runtime === "hermes-agent" ? hermesModel : runtime === "openclaw" ? openclawModel : null,
   cases: []
 };
 
@@ -49,8 +81,13 @@ if (runtime === "claude-code") {
     claudeSystemPrompt = `${style}\n\n${skill}`;
     metadata.integration_delivery = "fallback: exact output-style + skill via --append-system-prompt";
   }
-} else {
-  metadata.integration_delivery = "installed AGENTS.md via install-absurd-codex.sh";
+}
+
+function adaptSkillRuntimePrompt(evaluation) {
+  const match = evaluation.prompt.match(/^\/absurd\s+(dry|scene|chaos|normal)\s+([\s\S]*)$/i);
+  if (!match) return evaluation.prompt;
+  const [, mode, rest] = match;
+  return `Use the installed \"absurd\" skill in ${mode.toLowerCase()} mode. ${rest}`;
 }
 
 for (const matrixCase of matrix.cases) {
@@ -61,6 +98,9 @@ for (const matrixCase of matrix.cases) {
   const stdoutPath = path.join(outputDir, `${stem}.stdout.txt`);
   const stderrPath = path.join(outputDir, `${stem}.stderr.txt`);
   const started = Date.now();
+  const prompt = ["hermes-agent", "openclaw"].includes(runtime)
+    ? adaptSkillRuntimePrompt(evaluation)
+    : evaluation.prompt;
 
   let args;
   if (runtime === "codex") {
@@ -70,18 +110,48 @@ for (const matrixCase of matrix.cases) {
       args.push("--sandbox", "read-only");
     }
     args.push(evaluation.prompt);
-  } else {
+  } else if (runtime === "claude-code") {
     args = ["-p", evaluation.prompt, "--output-format", "json", "--max-turns", "1"];
     if (claudeUsesOutputStyleFlag) {
       args.push("--output-style", "absurd");
     } else {
       args.push("--append-system-prompt", claudeSystemPrompt);
     }
+  } else if (runtime === "hermes-agent") {
+    args = [
+      "chat",
+      "--quiet",
+      "-q",
+      prompt,
+      "--provider",
+      hermesProvider,
+      "--model",
+      hermesModel,
+      "--skills",
+      "absurd",
+      "--max-turns",
+      "1"
+    ];
+  } else {
+    const stateDir = process.env.OPENCLAW_STATE_DIR || path.join(process.env.HOME || ".", ".openclaw");
+    args = [
+      "agent",
+      "exec",
+      "--state-dir",
+      stateDir,
+      "--auth-env-only",
+      "--model",
+      openclawModel,
+      "--json",
+      "--timeout",
+      "240",
+      prompt
+    ];
   }
 
   const result = spawnSync(cli, args, {
     encoding: "utf8",
-    timeout: 240_000,
+    timeout: 300_000,
     maxBuffer: 8 * 1024 * 1024,
     env: process.env
   });
@@ -89,7 +159,7 @@ for (const matrixCase of matrix.cases) {
   fs.writeFileSync(stdoutPath, result.stdout || "");
   fs.writeFileSync(stderrPath, result.stderr || result.error?.message || "");
 
-  metadata.cases.push({
+  const caseMetadata = {
     eval_id: evaluation.id,
     name: evaluation.name,
     mode: evaluation.mode,
@@ -98,10 +168,23 @@ for (const matrixCase of matrix.cases) {
     duration_ms: Date.now() - started,
     stdout_file: path.basename(stdoutPath),
     stderr_file: path.basename(stderrPath),
+    prompt_adapted: prompt !== evaluation.prompt,
     error: result.error?.message || null
-  });
+  };
 
-  // Reduce the chance of short-burst rate limiting between six sequential calls.
+  if (runtime === "openclaw" && result.status === 0 && result.stdout) {
+    try {
+      const parsed = JSON.parse(result.stdout);
+      caseMetadata.actual_provider = parsed.provider || parsed.meta?.agentMeta?.provider || null;
+      caseMetadata.actual_model = parsed.model || parsed.meta?.agentMeta?.model || null;
+    } catch {
+      caseMetadata.output_parse_error = "OpenClaw stdout was not valid JSON";
+    }
+  }
+
+  metadata.cases.push(caseMetadata);
+
+  // Reduce the chance of short-burst rate limiting between sequential calls.
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1000);
 }
 
