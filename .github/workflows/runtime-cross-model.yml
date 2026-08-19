@@ -93,7 +93,7 @@ jobs:
 
   hermes-runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       HERMES_RUNTIME_PROVIDER: openai-api
@@ -105,13 +105,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Install Hermes Agent and АБСУРД
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-setup --skip-browser
-          export PATH="$HOME/.local/bin:$PATH"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          python -m pip install --upgrade pip
+          python -m pip install hermes-agent
           hermes --version | tee /tmp/hermes-version.txt
           bash install-absurd-hermes.sh
           hermes skills list | tee /tmp/hermes-skills.txt
